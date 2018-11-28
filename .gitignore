@@ -1,8 +1,9 @@
+checkpoints
 graphs
 record*
-a2c/graphs
-a2c/checkpoints
-layer/graphs
+*/record*
+*/graphs
+*/checkpoints
 .idea
 .DS_Store
 */__pycache__
