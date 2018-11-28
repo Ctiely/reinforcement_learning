@@ -1,0 +1,11 @@
+graphs
+record*
+a2c/graphs
+a2c/checkpoints
+layer/graphs
+.idea
+.DS_Store
+*/__pycache__
+__pycache__
+*/_test
+_test
