@@ -6,9 +6,8 @@ if __name__ == "__main__":
 
     envs = SubprocVecEnv([make_env(i) for i in range(4)])
     sess = tf.Session()
-    a2c = A2C(sess, envs, checkpoint_dir="./checkpoints/")
+    a2c = A2C(sess, envs, num_iterations=1000, save_step=1000, checkpoint_dir="./a2c/checkpoints/")
     a2c.train()
-    envs.close()
     env = SubprocVecEnv([make_env(0)])
-    a2c.test(env)
+    a2c.test(env, 100000)
     sess.close()

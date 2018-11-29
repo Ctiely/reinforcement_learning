@@ -56,10 +56,15 @@ class CNNPolicy(BasePolicy):
             with tf.name_scope("policy"):
                 self.action_s = noise_and_argmax(self.policy_logits)
 
+            with tf.name_scope("neg_log_pro"):
+                self.neg_log_probs = tf.nn.sparse_softmax_cross_entropy_with_logits(
+                    logits=self.policy_logits,
+                    labels=self.action_s)
+
     def step(self, observation):
         # Take a step using the model and return the predicted policy and value function
-        action, value = self.sess.run([self.action_s, self.value_s], feed_dict={self.X_input: observation})
-        return action, value
+        action, value, neg_log_pro = self.sess.run([self.action_s, self.value_s, self.neg_log_probs], feed_dict={self.X_input: observation})
+        return action, value, neg_log_pro
 
     def value(self, observation):
         # Return the predicted value function for a given observation

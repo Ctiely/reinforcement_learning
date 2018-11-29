@@ -4,9 +4,9 @@ from layer.layers import mse, openai_entropy
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 
-class A2CModel(object):
-    def __init__(self, sess, policy, name="a2c_policy", num_envs=4, num_steps=5, num_stack=4, entropy_coef=0.01,
-                 value_function_coeff=0.5, max_gradient_norm=0.5, optimizer_params=None):
+class PPOModel(object):
+    def __init__(self, sess, policy, name="ppo_policy", num_envs=4, num_steps=5, num_stack=4, entropy_coef=0.01,
+                 value_function_coeff=0.5, max_gradient_norm=0.5, clip_ratio=0.2, optimizer_params=None):
         """
         :param policy: policy class must implement method/attribute: policy_logits, value_function
         :param optimizer_params: RMSProp params = {'learning_rate': 7e-4, 'alpha': 0.99, 'epsilon': 1e-5}
@@ -16,6 +16,12 @@ class A2CModel(object):
         self.num_steps = num_steps
         self.num_stack = num_stack
         self.policy_name = name
+        self.clip_ratio = clip_ratio
+
+        self.prob_ratio = None
+        self.clipped_ratio = None
+        self.neg_new_log_probs = None
+        self.neg_old_log_probs = None
         self.actions = None
         self.advantage = None
         self.reward = None
@@ -52,11 +58,20 @@ class A2CModel(object):
             self.alpha = optimizer_params['alpha']
             self.epsilon = optimizer_params['epsilon']
 
+    def __clipped_objective(self, neg_new_log_probs, neg_old_log_probs, advs, epsilon):
+        """
+        Compute the component-wise clipped PPO objective.
+        """
+        self.prob_ratio = tf.exp(neg_old_log_probs - neg_new_log_probs, name="policy_ratio")
+        self.clipped_ratio = tf.clip_by_value(self.prob_ratio, 1 - epsilon, 1 + epsilon, "clipped_policy_ratio")
+        return tf.maximum(-advs * self.clipped_ratio, -advs * self.prob_ratio)
+
     def init_input(self):
         with tf.name_scope("input"):
             self.X_input_train_shape = (None, self.img_height, self.img_width, self.num_channels * self.num_stack)
             self.X_input_step_shape = (None, self.img_height, self.img_width, self.num_channels * self.num_stack)
 
+            self.neg_old_log_probs = tf.placeholder(dtype=tf.float32, shape=[None], name="neg_old_log_probs")
             self.actions = tf.placeholder(dtype=tf.int32, shape=[None], name="actions")
             self.advantage = tf.placeholder(dtype=tf.float32, shape=[None], name="advantage")
             self.reward = tf.placeholder(dtype=tf.float32, shape=[None], name="reward")
@@ -65,16 +80,18 @@ class A2CModel(object):
 
     def init_network(self):
         """
-        A2C model structure
+        PPO model structure
         :return:
         """
         self.step_policy = self.policy(self.sess, self.X_input_step_shape, self.num_actions, self.policy_name)
         self.train_policy = self.policy(self.sess, self.X_input_train_shape, self.num_actions, self.policy_name)
         with tf.variable_scope("train_output"):
-            negative_log_prob_action = tf.nn.sparse_softmax_cross_entropy_with_logits(
+            self.neg_new_log_probs = tf.nn.sparse_softmax_cross_entropy_with_logits(
                 logits=self.train_policy.policy_logits,
                 labels=self.actions)
-            self.policy_gradient_loss = tf.reduce_mean(self.advantage * negative_log_prob_action, name="policy_loss")
+            self.policy_gradient_loss = tf.reduce_mean(
+                self.__clipped_objective(self.neg_new_log_probs, self.neg_old_log_probs, self.advantage, self.clip_ratio),
+                name="policy_loss")
             self.value_function_loss = tf.reduce_mean(mse(tf.squeeze(self.train_policy.value_function), self.reward),
                                                       name="value_loss")
             self.entropy = tf.reduce_mean(openai_entropy(self.train_policy.policy_logits), name="entropy")
@@ -106,9 +123,9 @@ if __name__ == "__main__":
     from pprint import pprint
     from policies import CNNPolicy
     sess = tf.Session()
-    a2c_model = A2CModel(sess, CNNPolicy, name="a2c_policy")
-    a2c_model.build((84, 84, 3), 4)
-    pprint(a2c_model.trainable_variables)
-    writer = tf.summary.FileWriter("./graphs/test_a2c", sess.graph)
+    ppo_model = PPOModel(sess, CNNPolicy, name="ppo_policy")
+    ppo_model.build((84, 84, 3), 4)
+    pprint(ppo_model.trainable_variables)
+    writer = tf.summary.FileWriter("./graphs/test_ppo", sess.graph)
     writer.close()
     sess.close()
