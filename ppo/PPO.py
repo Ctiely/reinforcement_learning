@@ -41,7 +41,7 @@ class PPO(object):
                                   value_function_coeff=value_function_coeff,
                                   max_gradient_norm=max_gradient_norm,
                                   optimizer_params=optimizer_params)
-        logging.info("BUILD A2C MODEL...")
+        logging.info("BUILD PPO MODEL...")
         self.ppo_model.build(self.envs.observation_space.shape, self.envs.action_space.n)
         self.ppo_trainer = PPOTrainer(sess=self.sess,
                                       ppo_model=self.ppo_model,
