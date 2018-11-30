@@ -21,7 +21,7 @@ class PPO(object):
                  summary_dir="./graphs/PPO",
                  checkpoint_dir=None, # trainer
                  name="ppo_policy",
-                 num_steps=5,
+                 num_steps=2048,
                  num_stack=4,
                  entropy_coef=0.01,
                  value_function_coeff=0.5,

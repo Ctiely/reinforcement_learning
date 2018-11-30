@@ -5,7 +5,7 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 
 class PPOModel(object):
-    def __init__(self, sess, policy, name="ppo_policy", num_envs=4, num_steps=5, num_stack=4, entropy_coef=0.01,
+    def __init__(self, sess, policy, name="ppo_policy", num_envs=4, num_steps=2048, num_stack=4, entropy_coef=0.01,
                  value_function_coeff=0.5, max_gradient_norm=0.5, clip_ratio=0.2, optimizer_params=None):
         """
         :param policy: policy class must implement method/attribute: policy_logits, value_function
