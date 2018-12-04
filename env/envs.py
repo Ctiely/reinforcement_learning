@@ -80,13 +80,14 @@ class GymEnv(BaseEnv):
     def __init__(self, env_name, index, seed):
         super().__init__(env_name, index)
         self.seed = seed
+        self.gym_env = None
+        self.monitor = None
         self.make()
-        # Get the inside of the wrappers!
-        self.gym_env = self.env.env.env.env.env.env.env # 用wrap_deepmind包了好几层,到了最里层的gym的env
-        self.monitor = self.env.env.env.env.env.env.monitor # GymEnv类的monitor方法是self.env.env.env.env.env.env里的monitor方法
 
     def make(self):
-        env = Monitor(gym.make(self.env_name), self.rank)
+        self.gym_env = gym.make(self.env_name)
+        env = Monitor(self.gym_env, self.rank)
+        self.monitor = env.monitor
         env.seed(self.seed + self.rank)
         self.env = wrap_deepmind(env)
         return env
